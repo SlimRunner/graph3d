@@ -7,6 +7,7 @@
 #define OLED_ADDR 0x3C
 
 constexpr double TAU = 2 * PI;
+constexpr double SMALLANGLE = PI / 3;
 
 // declare an SSD1306 display object connected to I2C
 Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
@@ -16,7 +17,7 @@ float Xcam = 0, Ycam = -6.0 * M_SQRT2, Zcam = 6;
 float xdisp = 0, ydisp = 0, zdisp = 62.43;
 
 void setup() {
-  // Serial.begin(115200);
+  Serial.begin(115200);
 
   // initialize OLED display with address 0x3C for 128x64
   if (!oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
@@ -27,11 +28,16 @@ void setup() {
 }
 
 void loop() {
-  constexpr int FDELAY = 20; // 40 ms between frames
+  constexpr int FDELAY = 33; // ms between frames (~30 fps)
   constexpr int PIXTOTAL = SCREEN_WIDTH * SCREEN_HEIGHT;
-
   static int prevM = millis();
-  const int timeDelta = millis() - prevM;
+
+  int timeDelta = millis() - prevM;
+  if (timeDelta < FDELAY) {
+    delay(FDELAY - timeDelta);
+    timeDelta = FDELAY;
+  }
+  prevM = millis();
 
   oled.clearDisplay();
   constexpr int GSIZE = 5;
@@ -42,16 +48,12 @@ void loop() {
   oled.display();
 
   // https://www.desmos.com/calculator/xhun5i7v6z
-  Azcam = Azcam + 0.03;
+  Azcam = Azcam + SMALLANGLE * timeDelta / 1000;
   if (Azcam > TAU) {
     Azcam = Azcam - TAU;
   }
   Xcam = 6 * M_SQRT2 * cos(Azcam - PI / 2);
   Ycam = 6 * M_SQRT2 * sin(Azcam - PI / 2);
-  if (timeDelta < FDELAY) {
-    delay(FDELAY - timeDelta);
-  }
-  prevM = millis();
 }
 
 bool f3d(float x, float y, float z, float *xout, float *yout) {
